@@ -1,7 +1,7 @@
 # Implementación del algoritmo de búsqueda A*, generado por Github Copilot
 # acepta un entorno y dos puntos de inicio y fin
 # devuelve una lista de puntos que representan el camino más corto
-def aestrella(entorno, inicio, fin):
+def aestrella(entorno, inicio, fin, agente_para_evitar=None):
     class Nodo:
         def __init__(self, pos, padre, goal):
             self.pos = pos
@@ -16,8 +16,10 @@ def aestrella(entorno, inicio, fin):
             costo_obstaculo = 1000000 if (self.pos in entorno.obstaculos) else 0
             # Si la celda actual está en muchas rutas, asignar un costo alto
             costo_agentes = sum([10 for agent in entorno.agents if self.pos in agent.ruta])
+            
+            costo_deadlock = 1000000 if (agente_para_evitar and self.pos == agente_para_evitar.pos) else 0
 
-            return costo_obstaculo + costo_agentes
+            return costo_obstaculo + costo_agentes + costo_deadlock
 
         def __eq__(self, other):
             return self.pos == other.pos
