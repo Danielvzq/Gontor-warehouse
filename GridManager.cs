@@ -16,7 +16,7 @@ public class GridManager : MonoBehaviour
     private List<Coordenadas> initialPositions = new List<Coordenadas>();
     public List<Coordenadas> puntos_entregas = new List<Coordenadas>();
     private List<Coordenadas> obstacles = new List<Coordenadas>();
-    public Coordenadas puntoRecogida = null;
+    public List<Coordenadas> puntosRecogida = new List<Coordenadas>();
     private void Awake()
     {
         if (Instance == null)
@@ -45,7 +45,7 @@ public class GridManager : MonoBehaviour
         initialPositions.Clear();
         puntos_entregas.Clear();
         obstacles.Clear();
-        puntoRecogida = null;
+        puntosRecogida.Clear();
     }
 
     [ContextMenu("Spawn Grid")]
@@ -99,9 +99,9 @@ public class GridManager : MonoBehaviour
         initialPositions.Remove(coord);
         puntos_entregas.Remove(coord);
         obstacles.Remove(coord);
-        if (puntoRecogida != null && puntoRecogida.Equals(coord))
+        if (puntosRecogida != null && puntosRecogida.Equals(coord))
         {
-            puntoRecogida = null;
+            puntosRecogida = null;
         }
 
         switch (tile.Tipo)
@@ -115,8 +115,8 @@ public class GridManager : MonoBehaviour
             case TileType.Obstacle:
                 obstacles.Add(coord);
                 break;
-            case TileType.PuntoRecogida:
-                puntoRecogida = coord;
+            case TileType.PuntosRecogida:
+                puntosRecogida.Add(coord);
                 break;
         }
     }
@@ -140,7 +140,7 @@ public class GridManager : MonoBehaviour
             { "initial_positions", initialPositions.Select(c => new int[] { c.x, c.y }).ToArray() },
             { "obstacles", obstacles.Select(c => new int[] { c.x, c.y }).ToArray() },
             { "puntos_entregas", puntos_entregas.Select(c => new int[] { c.x, c.y }).ToArray() },
-            { "punto_recogida", puntoRecogida != null ? new int[] { puntoRecogida.x, puntoRecogida.y } : new int[] { 0, 0 } }, // 🔹 Se envía el punto de recogida
+            { "puntos_recogidas", puntosRecogida.Select(c => new int[] { c.x, c.y }).ToArray() },
             { "generate_txt", true }
         };
     }

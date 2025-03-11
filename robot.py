@@ -20,7 +20,7 @@ class Robot(Agent):
         self.destinos = []
 
         # Si el robot empieza en el punto de recogida, recoge un paquete
-        if self.pos == self.model.punto_recogida: self.actuar()
+        if self.pos in self.model.puntos_recogidas: self.actuar()
 
         self.elige_destino()
 
@@ -48,15 +48,15 @@ class Robot(Agent):
                 agentes_para_evitar.append(agent)
         
         if agentes_para_evitar:
-            # print(f"Robot {self.id} va a chocar con {len(agentes_para_evitar)} agentes")
+            # print(f"Robot {self.id} va a chocar con", [a.id for a in agentes_para_evitar])
             otro_robot_es_especial = False
             for agent in agentes_para_evitar:
-                otro_robot_es_especial = otro_robot_es_especial or (agent.pos == self.model.punto_recogida or (agent.pos in self.model.puntos_entregas))
-            punto_especial = (self.pos == self.model.punto_recogida) or (self.pos in self.model.puntos_entregas)
+                otro_robot_es_especial = otro_robot_es_especial or (agent.pos in self.model.puntos_recogidas or (agent.pos in self.model.puntos_entregas))
+            punto_especial = (self.pos in self.model.puntos_recogidas) or (self.pos in self.model.puntos_entregas)
             especial = punto_especial and not otro_robot_es_especial
             # print(f"Robot {self.id} es especial: {especial}")
             if especial or (not especial and self.id < min([agent.id for agent in agentes_para_evitar])):
-                # print(f"Robot {self.id} wins the tie!")
+                # print(f"Robot {self.id} recalculated!")
                 self.force_update_ruta(agentes_para_evitar)
                 return False
 
@@ -101,6 +101,6 @@ class Robot(Agent):
         if self.tiene_paquete:
             self.destinos.append(random.choice(self.model.puntos_entregas))
         else:
-            self.destinos.append(self.model.punto_recogida)
+            self.destinos.append(random.choice(self.model.puntos_recogidas))
         
         if self.pos: self.update_ruta()

@@ -16,6 +16,10 @@ def aestrella(entorno, inicio, fin, agentes_para_evitar=None):
             costo_obstaculo = 1000000 if (self.pos in entorno.obstaculos) else 0
 
             costo_agentes = 0
+            for agent in entorno.agents:
+                if self.pos in agent.ruta:
+                    costo_agentes += 10
+
             if agentes_para_evitar:
                 for agent in agentes_para_evitar:
                     if agent.pos == self.pos:

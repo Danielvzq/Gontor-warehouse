@@ -9,8 +9,9 @@ public class SocketClient : MonoBehaviour
 {
     public static SocketClient Instance { get; private set; }
     private WebSocket websocket;
-    private Coordenadas puntoRecogida;
+    private Coordenadas puntosRecogida;
     private Dictionary<int, Queue<Vector3>> agentPaths = new Dictionary<int, Queue<Vector3>>();
+    private Dictionary<int, Queue<Vector3>> agentMetas = new Dictionary<int, Queue<Vector3>>();
     private Dictionary<int, GameObject> agents = new Dictionary<int, GameObject>();
     private Dictionary<int, bool> agentPackageStatus = new Dictionary<int, bool>(); // Diccionario para almacenar el estado de tiene_paquete de cada agente
     [SerializeField] private GameObject agentPrefab; // Prefab del agente
@@ -98,8 +99,8 @@ public class SocketClient : MonoBehaviour
             List<int> punto = JsonConvert.DeserializeObject<List<int>>(data["punto_recogida"].ToString());
             if (punto.Count == 2)
             {
-                puntoRecogida = new Coordenadas(punto[0], punto[1]);
-                Debug.Log("Punto de recogida actualizado: " + puntoRecogida);
+                puntosRecogida = new Coordenadas(punto[0], punto[1]);
+                Debug.Log("Punto de recogida actualizado: " + puntosRecogida);
             }
             else
             {
@@ -111,6 +112,7 @@ public class SocketClient : MonoBehaviour
         if (data.ContainsKey("rutas"))
         {
             List<List<int[]>> rutas = JsonConvert.DeserializeObject<List<List<int[]>>>(data["rutas"].ToString());
+            List<List<int[]>> metas = JsonConvert.DeserializeObject<List<List<int[]>>>(data["metas"].ToString());
             Debug.Log("Recibidas rutas para " + rutas.Count + " agentes.");
 
             for (int i = 0; i < rutas.Count; i++)
@@ -131,7 +133,16 @@ public class SocketClient : MonoBehaviour
                     pathQueue.Enqueue(worldPosition);
                 }
 
+                Queue<Vector3> metaQueue = new Queue<Vector3>();
+
+                foreach (var meta in metas[i])
+                {
+                    Vector3 worldPosition = GridManager.Instance.GetWorldPosition(new Coordenadas(meta[0], meta[1]));
+                    metaQueue.Enqueue(worldPosition);
+                }
+
                 agentPaths[i] = pathQueue;
+                agentMetas[i] = metaQueue;
 
                 // Colocar al agente en la primera posición
                 if (agentPaths[i].Count > 0)
@@ -150,6 +161,8 @@ public class SocketClient : MonoBehaviour
 
    private void MoveAgents()
 {
+    float rotationSpeed = 5f; // Ajusta este valor para controlar la velocidad de rotación
+
     foreach (var agent in agents)
     {
         if (agentPaths.ContainsKey(agent.Key) && agentPaths[agent.Key].Count > 0)
@@ -160,47 +173,34 @@ public class SocketClient : MonoBehaviour
             // Calcular la dirección del movimiento
             Vector3 direction = nextPosition - currentPosition;
 
-            // Rotar el agente según la dirección del movimiento
+            // Rotar el agente lentamente hacia la dirección del movimiento
             if (direction != Vector3.zero)
             {
-                float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-                agent.Value.transform.rotation = Quaternion.Euler(0, angle, 0);
+                float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+                Quaternion targetRotation = Quaternion.Euler(0, targetAngle, 0);
+                agent.Value.transform.rotation = Quaternion.Slerp(agent.Value.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
             }
 
             // Mover el agente
             agent.Value.transform.position = Vector3.MoveTowards(currentPosition, nextPosition, Time.deltaTime * 5f);
 
             // Si ha llegado a la siguiente posición, la eliminamos de la cola
-            if (Vector3.Distance(currentPosition, nextPosition) < 0.1f)
+            if (Vector3.Distance(currentPosition, nextPosition) < 0.10f)
             {
-                // Eliminar el punto de la cola
                 agentPaths[agent.Key].Dequeue();
 
-                // Obtener la meta actual del agente
                 Vector3 currentMeta = GetNextMetaForAgent(agent.Key);
 
-                // Verificar si el agente ha llegado a su meta
-                if (Vector3.Distance(currentPosition, currentMeta) < 0.1f)  // Comparar con la meta actual
+                if (Vector3.Distance(currentPosition, currentMeta) < 0.1f)
                 {
                     Debug.Log("El agente ha llegado a su meta.");
-
-                    // Aquí puedes agregar la lógica de actualización del paquete
+                    var meta = agentMetas[agent.Key].Dequeue();
                     ActualizaPaquete actualiza = agent.Value.GetComponent<ActualizaPaquete>();
                     if (actualiza != null)
                     {
-                        bool isPackagePickedUp = agentPackageStatus.ContainsKey(agent.Key) && agentPackageStatus[agent.Key];
-                        actualiza.ActualizaPaqueteMethod(isPackagePickedUp);  // Llama a ActualizaPaqueteMethod con el estado
-                    }
-                }
-
-                // Verificar si el agente ha llegado a la meta final y actualizar el paquete si es así
-                if (agentPaths[agent.Key].Count == 0) // No hay más puntos, el agente llegó a la meta final
-                {
-                    ActualizaPaquete actualiza = agent.Value.GetComponent<ActualizaPaquete>();
-                    if (actualiza != null)
-                    {
-                        bool isPackagePickedUp = agentPackageStatus.ContainsKey(agent.Key) && agentPackageStatus[agent.Key];
-                        actualiza.ActualizaPaqueteMethod(isPackagePickedUp);  // Pasa el estado de tiene_paquete
+                        Vector3 worldPosition = GridManager.Instance.GetWorldPosition(new Coordenadas(0,0));
+                        bool isPackagePickedUp = Vector3.Distance(meta,worldPosition) < 0.1f;
+                        actualiza.ActualizaPaqueteMethod();
                     }
                 }
             }
@@ -213,7 +213,7 @@ private Vector3 GetNextMetaForAgent(int agentKey)
     // Obtén la meta actual del agente de la lista de metas
     if (agentPaths.ContainsKey(agentKey) && agentPaths[agentKey].Count > 0)
     {
-        return agentPaths[agentKey].Peek();  // Devolver la siguiente meta del agente
+        return agentMetas[agentKey].Peek();  // Devolver la siguiente meta del agente
     }
     return Vector3.zero;  // Si no hay más metas, devolver un vector nulo
 }
@@ -228,21 +228,6 @@ private Vector3 GetNextMetaForAgent(int agentKey)
         return new Coordenadas(x, y);
     }
     
-   private bool IsAtPuntoRecogida(Vector3 agentPosition)
-    {
-        // Obtener las coordenadas del tile en la que está el agente
-        Coordenadas agentCoord = GetTileCoordinatesFromWorldPosition(agentPosition);
-
-        // Verifica si el agente está en el punto de recogida
-        if (puntoRecogida != null && puntoRecogida.Equals(agentCoord))
-        {
-            Debug.Log("El agente está en el punto de recogida.");
-            return true;  // El agente está en el punto de recogida
-        }
-
-        return false;  // El agente no está en el punto de recogida
-    }
-
     private async void OnApplicationQuit()
     {
         await websocket.Close();

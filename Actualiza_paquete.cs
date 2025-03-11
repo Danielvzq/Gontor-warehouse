@@ -17,12 +17,12 @@ public class ActualizaPaquete : MonoBehaviour
     }
 
     // Llamado cuando el agente llega a la meta (para actualizar el estado del paquete)
-    public void ActualizaPaqueteMethod(bool isPackagePickedUp)
+    public void ActualizaPaqueteMethod()
     {
         if (packagePrefab == null) return;
 
         // Si el agente tiene el paquete, lo hace visible
-        if (isPackagePickedUp)
+        if (!packagePrefab.activeSelf)
         {
             packagePrefab.SetActive(true);
             Debug.Log("📦 El paquete ha sido asignado y es visible.");

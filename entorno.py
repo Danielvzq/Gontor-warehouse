@@ -12,21 +12,21 @@ from mesa.space import MultiGrid
 from robot import Robot
 
 class Entorno(Model):
-    punto_recogida = (0, 0)
+    puntos_recogidas = []
     puntos_entregas = []
     obstaculos = []
     entregas = 0
     
-    def __init__(self, n, width, height, punto_recogida = (0,0), puntos_entregas = None, pos_iniciales = [], obstaculos = [], seed = None):
+    def __init__(self, n, width, height, puntos_recogidas, puntos_entregas = None, pos_iniciales = [], obstaculos = [], seed = None):
         super().__init__(seed=seed)
-
-        self.punto_recogida = punto_recogida
 
         self.num_agents = n
         self.grid = MultiGrid(width, height, torus=False)
         self.running = True
 
         # Añadir puntos uno por uno, para que sean tuplas y no listas
+        for pair in puntos_recogidas:
+            self.puntos_recogidas.append((pair[0],pair[1]))
         for pair in puntos_entregas:
             self.puntos_entregas.append((pair[0],pair[1]))
         for pair in obstaculos:
@@ -57,14 +57,16 @@ class Entorno(Model):
         if len(posiciones) != len(set(posiciones)):
             print("COLISIONES")
             print(posiciones)
-            print([posiciones.count(pos) for pos in posiciones])
-            print()
+            # Print the agents that are colliding
+            for agent in self.agents:
+                if posiciones.count(agent.pos) > 1:
+                    print(f"Robot {agent.id} está en {agent.pos}")
 
     def print_state(self):
         print("Entorno:")
         for linea in range(self.grid.height-1, -1, -1):
             for i in range(self.grid.width):
-                if (i,linea) == self.punto_recogida:
+                if (i,linea) in self.puntos_recogidas:
                     print("I", end="")
                 elif (i,linea) in self.puntos_entregas:
                     print("M", end="")
