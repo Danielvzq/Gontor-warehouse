@@ -30,14 +30,14 @@ public class SceneController : MonoBehaviour
         }
 
         // Cargar la escena de créditos de manera aditiva
-        SceneManager.LoadScene("Creditos", LoadSceneMode.Additive);
+        SceneManager.LoadScene("Credits", LoadSceneMode.Additive);
     }
 
     // Método para cerrar la escena de créditos y restaurar la cámara principal
     public void CerrarCreditos()
     {
         // Descargar la escena de créditos
-        SceneManager.UnloadSceneAsync("Creditos");
+        SceneManager.UnloadSceneAsync("Credits");
 
         // Restaurar la cámara principal
         if (mainCamera != null)
