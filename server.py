@@ -11,11 +11,14 @@ import json
 
 from entorno import Entorno
 
+async def run_simulation(entorno, entregas_deseados):
+    while entorno.entregas < entregas_deseados:
+        entorno.step()
+
 async def handler(websocket):
     async for message in websocket:
-        print("Received:", message)
         data = json.loads(message)
-
+        print("Datos decodificados:", data)  # Imprime el diccionario de datos después de deserializar el JSON
         # Default: 1 robot, 30x53 almacen 
         num_agents = int(data.get("num_agents", 1))
         pos_iniciales = data.get("initial_positions", [])
@@ -23,14 +26,20 @@ async def handler(websocket):
         length = int(data.get("length", 53))
         obstaculos = data.get("obstacles", [])
         metas = data.get("puntos_entregas", [(width-1, length-1)])
+        entregas_deseados = data.get("deliveries", 2000)
         punto_recogida = tuple(data.get("punto_recogida", [0, 0]))
         generar_txt = data.get("generate_txt", False)
+        entorno = Entorno(num_agents, width, length, pos_iniciales=pos_iniciales, punto_recogida=punto_recogida, obstaculos=obstaculos, puntos_entregas=metas)
 
-        entorno = Entorno(num_agents, width, length, pos_iniciales=pos_iniciales, 
-                          obstaculos=obstaculos, puntos_entregas=metas, punto_recogida=punto_recogida)
+        # Run the simulation in an async task
+        simulation_task = asyncio.create_task(run_simulation(entorno, entregas_deseados))
 
-        for i in range(100):
-            entorno.step()
+        # Keep the connection alive while the simulation runs
+        while not simulation_task.done():
+            await asyncio.sleep(1)
+
+        # Wait for the simulation to complete
+        await simulation_task
 
         rutas = []
         metas = []

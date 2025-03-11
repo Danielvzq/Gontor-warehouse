@@ -1,7 +1,7 @@
 # Implementación del algoritmo de búsqueda A*, generado por Github Copilot
 # acepta un entorno y dos puntos de inicio y fin
 # devuelve una lista de puntos que representan el camino más corto
-def aestrella(entorno, inicio, fin, agente_para_evitar=None):
+def aestrella(entorno, inicio, fin, agentes_para_evitar=None):
     class Nodo:
         def __init__(self, pos, padre, goal):
             self.pos = pos
@@ -14,12 +14,15 @@ def aestrella(entorno, inicio, fin, agente_para_evitar=None):
         def evitar(self):
             # Si la celda actual está ocupada por un obstáculo, asignar un costo muy alto
             costo_obstaculo = 1000000 if (self.pos in entorno.obstaculos) else 0
-            # Si la celda actual está en muchas rutas, asignar un costo alto
-            costo_agentes = sum([10 for agent in entorno.agents if self.pos in agent.ruta])
-            
-            costo_deadlock = 1000000 if (agente_para_evitar and self.pos == agente_para_evitar.pos) else 0
 
-            return costo_obstaculo + costo_agentes + costo_deadlock
+            costo_agentes = 0
+            if agentes_para_evitar:
+                for agent in agentes_para_evitar:
+                    if agent.pos == self.pos:
+                        costo_agentes = 1000000
+                        break
+
+            return costo_obstaculo + costo_agentes
 
         def __eq__(self, other):
             return self.pos == other.pos
@@ -51,12 +54,11 @@ def aestrella(entorno, inicio, fin, agente_para_evitar=None):
             while nodo_actual:
                 camino.append(nodo_actual.pos)
                 nodo_actual = nodo_actual.padre
-            return camino[::-1]
+            
+            # print("Camino:", camino[::-1])
+            return camino[::-1][1:]
         # Generar los nodos sucesores
         for vecino in entorno.grid.get_neighborhood(nodo_actual.pos, moore=False, include_center=False):
-            # Si el vecino está ocupado, ignorarlo
-            if not entorno.grid.is_cell_empty(vecino):
-                continue
             # Crear el nodo sucesor
             sucesor = Nodo(vecino, nodo_actual, fin)
             # Si el nodo sucesor está en la lista de nodos cerrados, ignorarlo

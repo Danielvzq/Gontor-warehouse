@@ -13,11 +13,11 @@ from robot import Robot
 
 class Entorno(Model):
     punto_recogida = (0, 0)
-    puntos_entregas = [(0, 0)]
+    puntos_entregas = []
     obstaculos = []
+    entregas = 0
     
     def __init__(self, n, width, height, punto_recogida = (0,0), puntos_entregas = None, pos_iniciales = [], obstaculos = [], seed = None):
-        print("arguments:", n, width, height, punto_recogida, puntos_entregas, pos_iniciales, obstaculos, seed)
         super().__init__(seed=seed)
 
         self.punto_recogida = punto_recogida
@@ -33,7 +33,7 @@ class Entorno(Model):
             self.obstaculos.append((pair[0],pair[1]))
 
         for i in range(self.num_agents):
-            a = Robot(self)
+            a = Robot(self, i)
 
             if i < len(pos_iniciales):
                 x, y = pos_iniciales[i]
@@ -49,7 +49,16 @@ class Entorno(Model):
 
     def step(self):
         self.agents.shuffle_do("step")
-        self.print_state()
+        # self.detail_collisions()
+        # self.print_state()
+        
+    def detail_collisions(self):
+        posiciones = [agent.pos for agent in self.agents]
+        if len(posiciones) != len(set(posiciones)):
+            print("COLISIONES")
+            print(posiciones)
+            print([posiciones.count(pos) for pos in posiciones])
+            print()
 
     def print_state(self):
         print("Entorno:")
